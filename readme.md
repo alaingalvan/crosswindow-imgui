@@ -3,9 +3,9 @@
 [![cmake-img]][cmake-url]
 [![License][license-img]][license-url]
 
-An *optional* library to simplify integrating [ImGui](https://github.com/ocornut/imgui) with a renderer that uses CrossWindow by providing a forked ImGui backend with simplified defaults.
+An *optional* library to simplify integrating [ImGui](https://github.com/ocornut/imgui) with a renderer that uses CrossWindow by providing a forked ImGui backend with **simplified defaults** and **bindings for CrossWindow events**.
 
-Don't install ImGui if you're using this library, CrossWindow-Imgui wraps ImGui and includes a copy.
+> **Note** - Don't install ImGui if you're using this library, `CrossWindow-Imgui` wraps ImGui and *includes a copy*.
 
 ## Supports
 
@@ -27,6 +27,19 @@ Then in your `CMakeLists.txt` file, include the following:
 
 ```cmake
 add_subdirectory(external/crosswindow-imgui)
+
+target_link_libraries(
+    CrossWindowImGui
+    CrossWindowGraphics
+    CrossWindow
+)
+
+add_dependencies(
+    CrossWindowImGui
+    CrossWindowGraphics
+    CrossWindow
+    
+)
 
 target_link_libraries(
     ${PROJECT_NAME}
@@ -53,24 +66,6 @@ void xmain(int argc, char** argv)
   // ❎ DirectX 12.x Swapchain
   IDXGISwapChain1* swapchain = xgfx::createSwapchain(window, factory, commandQueue, &swapchainDesc);
 
-
-#elif defined(XGFX_OPENGL)
-
-  // ⚪ OpenGL / OpenGL ES / 🌐 WebGL platform specific context data
-  xgfx::OpenGLDesc desc;
-  xgfx::OpenGLState state = xgfx::createContext(&window, desc);
-
-  // ⬇️ Set the context
-  xgfx::setContext(state);
-
-  // 🔀 Refresh your window
-  xgfx::swapBuffers(state);
-
-  // ⬆️ Unset the context
-  xgfx::unsetContext(state);
-
-  // ⬅️ Destroy the context
-  xgfx::destroyContext(state);
 #endif
 
   // 📄 Then your API specific data structures for ImGui.
@@ -78,12 +73,8 @@ void xmain(int argc, char** argv)
 #if defined(XGFX_DIRECTX12)
   
   // ❎ DirectX 12.x
-  xgfx::imguiInit(device, 2, DXGI_FORMAT_R8G8B8A8_UNORM, srvHeap, fontGpuHandle, fontCpuHandle);
-  
-
-#elif defined(XGFX_OPENGL)
-
-  // ⚪ OpenGL / OpenGL ES / 🌐 WebGL platform specific context data
+  xgfx::D3D12ImGuiManager manager;
+  manager.init(device, numFramesInFlight, rtvFormat, cbvSrvHeap, fontCpuDescHandle, fontGpuDeschandle);
 
 #endif
 }
