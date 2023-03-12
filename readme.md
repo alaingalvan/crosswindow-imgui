@@ -60,21 +60,18 @@ void xmain(int argc, char** argv)
   xwin::Window window;
   
   // 🖌️ Create your renderer...
-  
-#if defined(XGFX_DIRECTX12)
-  
-  // ❎ DirectX 12.x Swapchain
-  IDXGISwapChain1* swapchain = xgfx::createSwapchain(window, factory, commandQueue, &swapchainDesc);
-
-#endif
-
-  // 📄 Then your API specific data structures for ImGui.
 
 #if defined(XGFX_DIRECTX12)
   
   // ❎ DirectX 12.x
   xgfx::D3D12ImGuiManager manager;
   manager.init(device, numFramesInFlight, rtvFormat, cbvSrvHeap, fontCpuDescHandle, fontGpuDeschandle);
+
+#elif defined(XGFX_OPENGL)
+
+  // ⚪ OpenGL
+  xgfx::OpenGLImGuiManager manager;
+  manager.init();
 
 #endif
 }

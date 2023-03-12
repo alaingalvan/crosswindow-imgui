@@ -25,16 +25,17 @@ class D3D12ImGuiManager : public ImGuiManager
               D3D12_CPU_DESCRIPTOR_HANDLE fontCpuDescHandle,
               D3D12_GPU_DESCRIPTOR_HANDLE fontGpuDeschandle);
 
-    void update(float deltaTime);
-
     void shutdown();
     void newFrame();
+
+    void setupRenderState(ImDrawData* drawData, ID3D12GraphicsCommandList* ctx,
+                          ImGuiD3D12RenderBuffers* fr);
+
     void renderDrawData(ImDrawData* drawData,
                         ID3D12GraphicsCommandList* graphicsCommandList);
 
     void invalidateDeviceObjects();
     bool createDeviceObjects();
-
     bool createFontTexture();
 };
 }
