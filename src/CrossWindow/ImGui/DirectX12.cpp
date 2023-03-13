@@ -60,10 +60,10 @@ struct VERTEX_CONSTANT_BUFFER_DX12
 
 // Functions
 void D3D12ImGuiManager::setupRenderState(ImDrawData* drawData,
-                             ID3D12GraphicsCommandList* ctx,
-                             ImGuiD3D12RenderBuffers* fr)
+                                         ID3D12GraphicsCommandList* ctx,
+                                         ImGuiD3D12RenderBuffers* fr)
 {
-    ImGui_ImplDX12_Data* bd = GetBackendData();
+    ImGuiD3D12Data* bd = GetBackendData();
 
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from drawData->DisplayPos (top left) to
@@ -86,8 +86,8 @@ void D3D12ImGuiManager::setupRenderState(ImDrawData* drawData,
     // Setup viewport
     D3D12_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-    vp.Width = drawData->DisplaySize.x;
-    vp.Height = drawData->DisplaySize.y;
+    vp.Width = drawData->DisplaySize.x * drawData->FramebufferScale.x;
+    vp.Height = drawData->DisplaySize.y * drawData->FramebufferScale.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -127,7 +127,7 @@ template <typename T> static inline void SafeRelease(T*& res)
 
 D3D12ImGuiManager::D3D12ImGuiManager() {}
 
-D3D12ImGuiManager::~D3D12ImGuiManager() { destroyDeviceObjects(); }
+D3D12ImGuiManager::~D3D12ImGuiManager() { invalidateDeviceObjects(); }
 
 bool D3D12ImGuiManager::init(ID3D12Device* device, int numFramesInFlight,
                              DXGI_FORMAT rtvFormat,
@@ -318,10 +318,14 @@ void D3D12ImGuiManager::renderDrawData(
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x,
-                                pcmd->ClipRect.y - clip_off.y);
-                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x,
-                                pcmd->ClipRect.w - clip_off.y);
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) *
+                                    drawData->FramebufferScale.x,
+                                (pcmd->ClipRect.y - clip_off.y) *
+                                    drawData->FramebufferScale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) *
+                                    drawData->FramebufferScale.x,
+                                (pcmd->ClipRect.w - clip_off.y) *
+                                    drawData->FramebufferScale.y);
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
@@ -370,7 +374,7 @@ bool D3D12ImGuiManager::createDeviceObjects()
 
     // Create the root signature
     {
-        D3D12_DESCRIPTOR_RANGE descRange = {};
+        D3D12_DESCRIPTOR_RANGE1 descRange = {};
         descRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         descRange.NumDescriptors = 1;
         descRange.BaseShaderRegister = 0;
@@ -408,38 +412,33 @@ bool D3D12ImGuiManager::createDeviceObjects()
         staticSampler.RegisterSpace = 0;
         staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-        D3D12_ROOT_SIGNATURE_DESC desc = {};
-        desc.NumParameters = _countof(param);
-        desc.pParameters = param;
-        desc.NumStaticSamplers = 1;
-        desc.pStaticSamplers = &staticSampler;
-        desc.Flags =
+        // TODO load serialized root signature...
+        D3D12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+        rootSignatureDesc.Desc_1_1.Flags =
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-        // TODO load serialized root signature...
-        D3D12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-        rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-        rootSignatureDesc.Desc_1_1.NumParameters = 1;
+        rootSignatureDesc.Desc_1_1.NumParameters = _countof(param);
         rootSignatureDesc.Desc_1_1.pParameters = param;
-        rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
-        rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
+        rootSignatureDesc.Desc_1_1.NumStaticSamplers = 1;
+        rootSignatureDesc.Desc_1_1.pStaticSamplers = &staticSampler;
 
         ID3DBlob* signature;
         ID3DBlob* error;
 
-        ID3DBlob* blob = nullptr;
-        if (3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature,
-                                                &error) != S_OK)
+        if (D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature,
+                                                 &error) != S_OK)
+        {
+            error->Release();
             return false;
+        }
 
-        bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(),
-                                            blob->GetBufferSize(),
+        bd->pd3dDevice->CreateRootSignature(0, signature->GetBufferPointer(),
+                                            signature->GetBufferSize(),
                                             IID_PPV_ARGS(&bd->pRootSignature));
-        blob->Release();
+        signature->Release();
     }
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
@@ -452,9 +451,6 @@ bool D3D12ImGuiManager::createDeviceObjects()
     psoDesc.RTVFormats[0] = bd->RTVFormat;
     psoDesc.SampleDesc.Count = 1;
     psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-    ID3DBlob* vertexShaderBlob;
-    ID3DBlob* pixelShaderBlob;
 
     // Create the vertex shader
     {
@@ -528,16 +524,15 @@ bool D3D12ImGuiManager::createDeviceObjects()
 
     HRESULT result_pipeline_state = bd->pd3dDevice->CreateGraphicsPipelineState(
         &psoDesc, IID_PPV_ARGS(&bd->pPipelineState));
-    vertexShaderBlob->Release();
-    pixelShaderBlob->Release();
+
     if (result_pipeline_state != S_OK) return false;
 
-    createFontsTexture();
+    createFontTexture();
 
     return true;
 }
 
-bool D3D12ImGuiManager::createFontTexture()
+void D3D12ImGuiManager::createFontTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();

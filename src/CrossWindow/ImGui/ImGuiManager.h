@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CrossWindow/Common/Event.h"
+#include <string>
 
 namespace xgfx
 {
@@ -14,8 +15,10 @@ class ImGuiManager
     // getting written strings.
     const std::string& getCharacterBuffer() const;
 
+    void clearCharacterBuffer();
+
   protected:
-    bool create();
+    void create();
     std::string charBuf;
 };
 }

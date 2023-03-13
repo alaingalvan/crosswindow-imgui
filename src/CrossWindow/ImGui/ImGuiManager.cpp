@@ -1,10 +1,24 @@
 #include "ImGuiManager.h"
+#include "imgui.h"
+
+#include <algorithm>
+
+namespace
+{
+std::string str_tolower(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return s;
+}
+}
 
 namespace xgfx
 {
-bool ImGuiManager::create()
+void ImGuiManager::create()
 {
     // Map ImGui inputs to CrossWindow
+    ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = static_cast<size_t>(xwin::Key::Tab);
     io.KeyMap[ImGuiKey_LeftArrow] = static_cast<size_t>(xwin::Key::Left);
     io.KeyMap[ImGuiKey_RightArrow] = static_cast<size_t>(xwin::Key::Right);
@@ -113,7 +127,7 @@ bool ImGuiManager::create()
     io.KeyMap[ImGuiKey_Keypad8] = static_cast<size_t>(xwin::Key::Subtract);
     io.KeyMap[ImGuiKey_Keypad9] = static_cast<size_t>(xwin::Key::Add);
 
-    io.KeyMap[ImGuiKey_KeyPadEnter] =
+    io.KeyMap[ImGuiKey_KeypadEnter] =
         static_cast<size_t>(xwin::Key::Numpadenter);
 
     io.ConfigFlags |=
@@ -200,5 +214,10 @@ void ImGuiManager::updateEvent(xwin::Event e)
     }
 }
 
-const std::string& ImGuiManager::getCharacterBuffer() const { return charBuf; }
+const std::string& ImGuiManager::getCharacterBuffer() const
+{
+    return charBuf + "\0";
+}
+
+void ImGuiManager::clearCharacterBuffer() { charBuf.clear(); }
 }

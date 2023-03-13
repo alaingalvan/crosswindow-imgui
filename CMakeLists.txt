@@ -61,11 +61,12 @@ target_compile_definitions(ImGui PUBLIC IMGUI_DISABLE_DEMO_WINDOWS)
 
 file(GLOB_RECURSE FILE_SOURCES RELATIVE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ImGui/ImGuiManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ImGui/ImGuiManager.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ImGui/${XGFX_API_PATH}.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ImGui/${XGFX_API_PATH}.mm
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ImGui/${XGFX_API_PATH}.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CrossWindow/ImGui/ImGui.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CrossWindow/ImGui/ImGuiManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CrossWindow/ImGui/ImGuiManager.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CrossWindow/ImGui/${XGFX_API_PATH}.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CrossWindow/ImGui/${XGFX_API_PATH}.mm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CrossWindow/ImGui/${XGFX_API_PATH}.h
 )
 
 # Solution Filters
@@ -83,6 +84,16 @@ endforeach()
 add_library(
     CrossWindowImGui
     ${FILE_SOURCES}
+)
+
+target_link_libraries(
+    CrossWindowImGui
+    ImGui
+)
+
+add_dependencies(
+    CrossWindowImGui
+    ImGui
 )
 
 target_include_directories(
