@@ -216,7 +216,7 @@ void ImGuiManager::updateEvent(xwin::Event e)
 
 const std::string& ImGuiManager::getCharacterBuffer() const
 {
-    return charBuf + "\0";
+    return charBuf;
 }
 
 void ImGuiManager::clearCharacterBuffer() { charBuf.clear(); }
