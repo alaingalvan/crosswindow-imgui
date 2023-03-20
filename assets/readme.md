@@ -4,6 +4,6 @@ Shaders are compiled to header files and included in CrossWindow-ImGui, if you w
 
 ```bash
 # DirectX 12
-dxc -T vs_6_6 -Fh assets/imgui.vert.h assets/imgui.vert.hlsl
-dxc -T ps_6_6 -Fh assets/imgui.frag.h assets/imgui.frag.hlsl
+dxc -T vs_6_5 -Fh assets/imgui.vert.h assets/imgui.vert.hlsl
+dxc -T ps_6_5 -Fh assets/imgui.frag.h assets/imgui.frag.hlsl
 ```
